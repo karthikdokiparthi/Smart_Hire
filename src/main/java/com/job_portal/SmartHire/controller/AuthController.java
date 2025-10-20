@@ -2,8 +2,12 @@ package com.job_portal.SmartHire.controller;
 
 import com.job_portal.SmartHire.dto.AuthRequest;
 import com.job_portal.SmartHire.dto.AuthResponse;
+import com.job_portal.SmartHire.dto.ResetPasswordRequest;
 import com.job_portal.SmartHire.service.AppUserDetailsService;
+import com.job_portal.SmartHire.service.UserService;
+import com.job_portal.SmartHire.service.UserServiceImpl;
 import com.job_portal.SmartHire.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -14,8 +18,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -30,6 +37,9 @@ public class AuthController {
 
     @Autowired
     private final AppUserDetailsService userDetailsService;
+
+    @Autowired
+    private final UserServiceImpl userService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -75,4 +85,64 @@ public class AuthController {
     private void authenticate(String email, String password) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email,password));
     }
+
+    @GetMapping("/is-authenticated")
+    public ResponseEntity<Boolean> isAuthenticated(@CurrentSecurityContext(expression = "authentication?.name")String email){
+        return ResponseEntity.ok(email !=null);
+    }
+
+    @PostMapping("/send-reset-otp/{email}")
+    public ResponseEntity<String> sendResetOtp(@PathVariable String email) {
+        try {
+            userService.sendResetOtp(email);
+            return ResponseEntity.ok("Reset OTP sent successfully to " + email);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+        try{
+            userService.resetPassword(request.getEmail(),request.getOtp(),request.getNewPassword());
+            return ResponseEntity.ok("Reset password Successful");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendVerifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email){
+        try{
+            userService.sendOtp(email);
+            return ResponseEntity.ok("OTP Send Successful");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<String> verifyEmail(
+            @RequestBody Map<String, Object> request,
+            @CurrentSecurityContext(expression = "authentication.name") String email) {
+
+        Object otpObj = request.get("otp");
+        if (otpObj == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing OTP");
+        }
+
+        String otp = otpObj.toString();
+
+        try {
+            userService.verifyOtp(email, otp);
+            return ResponseEntity.ok("Account verified successfully");
+        } catch (UsernameNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        }
+    }
+
 }
