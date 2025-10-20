@@ -43,8 +43,8 @@ public class SecurityConfig {
                                 "/api/user/register",
                                 "/api/user/login",
                                 "/api/user/hello",
-                                "/send-reset-otp",
-                                "/reset-password",
+                                "/api/user/send-reset-otp/**",
+                                "/api/user/reset-password",
                                 "/logout")
                         .permitAll()
                         .anyRequest().authenticated()

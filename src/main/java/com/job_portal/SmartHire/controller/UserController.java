@@ -2,6 +2,7 @@ package com.job_portal.SmartHire.controller;
 
 import com.job_portal.SmartHire.dto.UserRequest;
 import com.job_portal.SmartHire.dto.UserResponse;
+import com.job_portal.SmartHire.service.EmailService;
 import com.job_portal.SmartHire.service.UserServiceImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +17,13 @@ public class UserController {
 
     @Autowired
     private UserServiceImpl userService;
+    @Autowired
+    private EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRequest request){
         UserResponse response=userService.createUser(request);
+        emailService.sendWelcomeEmail(response.getEmail(),response.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

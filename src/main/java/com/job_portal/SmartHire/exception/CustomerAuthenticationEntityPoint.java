@@ -16,6 +16,6 @@ public class CustomerAuthenticationEntityPoint implements AuthenticationEntryPoi
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
-        response.getWriter().write("{\"authenticated\": false,\"message\": \"User s not authenticated\"}");
+        response.getWriter().write("{\"authenticated\": false,\"message\": \"User not authenticated\"}");
     }
 }
